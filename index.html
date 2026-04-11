@@ -1550,10 +1550,11 @@ body {
     </div>
   </div>
   <script>
+    // ✅ GitHub Pages专属配置（核心修复）
     const config = {
-      basePath: 'pages/',
+      basePath: '/pages/', // 加斜杠解决GitHub路径问题
       homePage: 'home.md',
-      sidebarFile: '_sidebar.md',
+      sidebarFile: '/_sidebar.md', // 加斜杠直接从根目录加载
       titleSuffix: ' - GDHの文档',
       loadSidebar: true,
       auto2top: true,
@@ -1919,6 +1920,7 @@ body {
         const pathParts = currentPath.split('/');
         pathParts.pop();
         const basePath = pathParts.join('/');
+        // ✅ 修复相对路径拼接问题
         href = basePath ? `${config.basePath}${basePath}/${href}` : `${config.basePath}${href}`;
       }
       return `<img src="${href}" alt="${text}" title="${title || ''}" onclick="openImageViewer('${href}')">`;
@@ -1986,7 +1988,8 @@ body {
 
     async function loadSidebar() {
       try {
-        const res = await fetch(config.sidebarFile);
+        // ✅ 加时间戳彻底解决GitHub缓存问题
+        const res = await fetch(`${config.sidebarFile}?t=${Date.now()}`);
         if (!res.ok) throw new Error('侧边栏文件不存在');
         const md = await res.text();
         
@@ -2062,7 +2065,8 @@ body {
           try {
             const filePath = item.path ? `${item.path}.md` : config.homePage;
             const fullPath = config.basePath + filePath;
-            const res = await fetch(fullPath);
+            // ✅ 加时间戳解决文档缓存问题
+            const res = await fetch(`${fullPath}?t=${Date.now()}`);
             if (res.ok) {
               const md = await res.text();
               searchCache[item.path] = {
@@ -2110,7 +2114,8 @@ body {
 
       try {
         const fullPath = config.basePath + filePath;
-        const res = await fetch(fullPath);
+        // ✅ 加时间戳解决文档缓存问题
+        const res = await fetch(`${fullPath}?t=${Date.now()}`);
         if (!res.ok) throw new Error('文档不存在');
         
         const md = await res.text();
@@ -2147,6 +2152,7 @@ body {
           <div class="not-found">
             <h1>404</h1>
             <p>文档不存在或加载失败</p>
+            <p>请检查pages文件夹中是否存在 <code>${filePath}</code> 文件</p>
             <a href="#/home" class="btn btn-primary">返回首页</a>
           </div>
         `;
