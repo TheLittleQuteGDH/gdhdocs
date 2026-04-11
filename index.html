@@ -1549,12 +1549,23 @@ body {
       <img id="viewerImage" src="" alt="放大图片">
     </div>
   </div>
+
   <script>
-    // ✅ GitHub Pages专属配置（核心修复）
+    // ✅ 自动检测GitHub Pages基础路径（核心修复）
+    const getBaseURL = () => {
+      const pathname = window.location.pathname;
+      // 去掉末尾的index.html和斜杠
+      const basePath = pathname.replace(/index\.html$/, '').replace(/\/$/, '');
+      return basePath ? `${basePath}/` : './';
+    };
+
+    const baseURL = getBaseURL();
+    console.log('✅ 自动检测到基础路径:', baseURL);
+
     const config = {
-      basePath: '/pages/', // 加斜杠解决GitHub路径问题
+      basePath: `${baseURL}pages/`, // 自动拼接pages路径
       homePage: 'home.md',
-      sidebarFile: '/_sidebar.md', // 加斜杠直接从根目录加载
+      sidebarFile: `${baseURL}_sidebar.md`, // 自动拼接侧边栏路径
       titleSuffix: ' - GDHの文档',
       loadSidebar: true,
       auto2top: true,
@@ -1920,7 +1931,6 @@ body {
         const pathParts = currentPath.split('/');
         pathParts.pop();
         const basePath = pathParts.join('/');
-        // ✅ 修复相对路径拼接问题
         href = basePath ? `${config.basePath}${basePath}/${href}` : `${config.basePath}${href}`;
       }
       return `<img src="${href}" alt="${text}" title="${title || ''}" onclick="openImageViewer('${href}')">`;
@@ -1988,10 +1998,11 @@ body {
 
     async function loadSidebar() {
       try {
-        // ✅ 加时间戳彻底解决GitHub缓存问题
+        console.log('📂 正在加载侧边栏:', config.sidebarFile);
         const res = await fetch(`${config.sidebarFile}?t=${Date.now()}`);
-        if (!res.ok) throw new Error('侧边栏文件不存在');
+        if (!res.ok) throw new Error(`侧边栏文件加载失败: ${res.status} ${res.statusText}`);
         const md = await res.text();
+        console.log('✅ 侧边栏加载成功');
         
         const parser = new DOMParser();
         const doc = parser.parseFromString(marked.parse(md), 'text/html');
@@ -2007,8 +2018,12 @@ body {
         bindSubmenuEvents();
         preloadAllDocs();
       } catch (err) {
-        console.error('侧边栏加载失败', err);
-        sidebarMenu.innerHTML = `<li style="padding: 20px; text-align: center; color: var(--text-tertiary);">请在根目录创建 _sidebar.md 文件</li>`;
+        console.error('❌ 侧边栏加载失败', err);
+        sidebarMenu.innerHTML = `<li style="padding: 20px; text-align: center; color: var(--text-tertiary);">
+          侧边栏加载失败<br>
+          错误: ${err.message}<br>
+          请检查根目录是否存在 _sidebar.md 文件
+        </li>`;
       }
     }
 
@@ -2065,7 +2080,7 @@ body {
           try {
             const filePath = item.path ? `${item.path}.md` : config.homePage;
             const fullPath = config.basePath + filePath;
-            // ✅ 加时间戳解决文档缓存问题
+            console.log('📄 预加载文档:', fullPath);
             const res = await fetch(`${fullPath}?t=${Date.now()}`);
             if (res.ok) {
               const md = await res.text();
@@ -2073,9 +2088,12 @@ body {
                 title: item.text,
                 content: md
               };
+              console.log('✅ 预加载成功:', item.path);
+            } else {
+              console.warn('⚠️ 预加载失败:', fullPath, res.status);
             }
           } catch (err) {
-            console.warn(`预加载文档失败: ${item.path}`, err);
+            console.warn(`⚠️ 预加载文档失败: ${item.path}`, err);
           }
         }
       }
@@ -2114,11 +2132,12 @@ body {
 
       try {
         const fullPath = config.basePath + filePath;
-        // ✅ 加时间戳解决文档缓存问题
+        console.log('📄 正在加载文档:', fullPath);
         const res = await fetch(`${fullPath}?t=${Date.now()}`);
-        if (!res.ok) throw new Error('文档不存在');
+        if (!res.ok) throw new Error(`文档加载失败: ${res.status} ${res.statusText}`);
         
         const md = await res.text();
+        console.log('✅ 文档加载成功');
         headings = [];
         const html = marked.parse(md);
         markdownBody.innerHTML = html;
@@ -2147,12 +2166,13 @@ body {
           content: md
         };
       } catch (err) {
-        console.error(err);
+        console.error('❌ 文档加载失败', err);
         markdownBody.innerHTML = `
           <div class="not-found">
             <h1>404</h1>
             <p>文档不存在或加载失败</p>
-            <p>请检查pages文件夹中是否存在 <code>${filePath}</code> 文件</p>
+            <p>请求路径: <code>${fullPath}</code></p>
+            <p>错误信息: ${err.message}</p>
             <a href="#/home" class="btn btn-primary">返回首页</a>
           </div>
         `;
